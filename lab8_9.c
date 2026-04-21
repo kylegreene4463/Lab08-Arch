@@ -34,7 +34,7 @@ void CPU(unsigned char* mem) {
 
         // Lab 9: Finish the execution of the code.
         // Only finish this part when the CPU_Decode is done.
-        // CPU_Execution(opcode, machineCode, mem);
+    CPU_Execution(opcode, machineCode, mem);
     } while (1);  // This is an infinite while loop
     // When you fetch a machineCode of 00000000, the loop breaks.
     printRegisterFiles();     // After the code execution, print all the register contents on screen.
@@ -63,39 +63,74 @@ unsigned char CPU_Decode(unsigned int machineCode) {
 
 // Lab 9: Finish the function CPU_Execution to run all the instructions.
 void CPU_Execution(unsigned char opcode, unsigned int machineCode, char* mem) {
-    unsigned char rt = 0;
-    switch (opcode)  // execute different functions when opcode is set differently. 
-    {
-        // This is an example how lab will be executed. Please follow this example and finish exections of the code.
-        // Hint: you need to implement the following instructions here: 
-        //       la, add, lb, bge, lw, sw, addi, j
-    case 0b101111:   //"la" instruction. 
-        // assign the address rt = immediate address stored in machineCode;
-        // first find the rt index in the register array. 
-        rt = (machineCode & 0x001F0000) >> 16;
-        // assign the address stored in immediate field to regFile[rt];
-        regFile[rt] = machineCode & 0x0000FFFF;  // get the last 16 bit as address. 
-        // update PCregister ???? Pay special attention to branch instructions. 
-        PCRegister += 4;
-        if (DEBUG_CODE) {   // print the hints to the user in DEBUG_MODE
-            printf("Code Executed: %08X\n", machineCode);
-            printf("****** PC Register is %08X ******\n", PCRegister);
+    unsigned char rs, rt, rd, funct;
+    short immediate;
+    unsigned int target;
+
+    // Decoding common fields for I-type and R-type
+    rs = (machineCode >> 21) & 0x1F;
+    rt = (machineCode >> 16) & 0x1F;
+    rd = (machineCode >> 11) & 0x1F;
+    funct = machineCode & 0x3F;
+    immediate = (short)(machineCode & 0xFFFF); // Cast to short for sign extension
+    target = (machineCode & 0x03FFFFFF);      // 26-bit target for J-type
+
+    switch (opcode) {
+    case 0x00: // R-Type instructions use opcode 0
+        if (funct == 0x20) { // "add" instruction
+            regFile[rd] = regFile[rs] + regFile[rt];
         }
         break;
-    case 0b100000://"lb" instruction. 
-        //....
+
+    case 0b101111: // "la" (Pseudo-instruction handled as I-type in this lab) [cite: 10]
+        regFile[rt] = machineCode & 0x0000FFFF;
         break;
 
-        // continue to all the other cases used in the program.
-        // case ......:    
+    case 0b100000: // "lb" (load byte)
+        regFile[rt] = (signed char)mem[regFile[rs] + immediate];
+        break;
 
+    case 0b100011: // "lw" (load word)
+        regFile[rt] = read_dword(mem, regFile[rs] + immediate);
+        break;
 
-        // Should never go to default part when complete. Otherwise, that is a mistake. 
+    case 0b101011: // "sw" (store word)
+        write_dword(mem, regFile[rs] + immediate, regFile[rt]);
+        break;
+
+    case 0x01: // "bge" instruction
+        // Compare the registers (rs and rt)
+        // If rs is greater than or equal to rt, branch to the offset
+        if (regFile[rs] >= regFile[rt]) {
+            // Note: PCRegister was already incremented by 4 in the CPU loop,
+            // so we add the offset to the updated PC.
+            PCRegister += (immediate << 2);
+        }
+        break;
+
+    case 0b001000: // "addi" (add immediate)
+        regFile[rt] = regFile[rs] + immediate;
+        break;
+
+    case 0b000100: // "beq" (Used for bge logic in some MIPS variants)
+        if (regFile[rs] >= regFile[rt]) {
+            PCRegister += (immediate << 2);
+        }
+        break;
+
+    case 0b000010: // "j" (jump)
+        PCRegister = (PCRegister & 0xF0000000) | (target << 2);
+        return; // Return early to prevent the default PC+4 increment if applicable
+
     default:
-        printf("Wrong instruction! You need to fix this instruction %02X %08X\n", opcode, machineCode);
+        printf("Wrong instruction! %02X %08X\n", opcode, machineCode);
         system("PAUSE");
-        exit(3);  // exit the program if running here.     
+        exit(3);
         break;
+    }
+
+    if (DEBUG_CODE) {
+        printf("Code Executed: %08X\n", machineCode);
     }
 }
 

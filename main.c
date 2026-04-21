@@ -43,13 +43,13 @@ int main (int argc, char *argv[]) {
         puts("----Lab 7 Code Starts to Parse the ASM Code----");
         loadCodeToMem(mem);
         stopChar = getchar();
-		// puts("----Lab 8 Code Starts to Fetch and Decode the Code ----");
+		puts("----Lab 8 Code Starts to Fetch and Decode the Code ----");
         // Step 4: CPU Fetch the machinecode (lab 8)
         // Step 5: CPU Decode the machine code (lab 8)
 		
-		// puts("----Lab 9 Code Starts to Execute the Code ----");
+		puts("----Lab 9 Code Starts to Execute the Code ----");
         // Step 6: Execute the code until the code is finished(lab 9)                  
-         // CPU(mem);  // this is needed in lab 8 and later 
-          // stopChar = getchar();
+        CPU(mem);  // this is needed in lab 8 and later 
+        stopChar = getchar();
         free_memory(mem);  // free the memory, this is for lab 7 and later 
 }
